@@ -1,0 +1,26 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icon/play.png</file>
+        <file>icon/play_press.png</file>
+        <file>icon/pause.png</file>
+        <file>icon/pause_press.png</file>
+        <file>icon/previous.png</file>
+        <file>icon/previous_press.png</file>
+        <file>icon/next.png</file>
+        <file>icon/next_press.png</file>
+        <file>icon/speaker.png</file>
+        <file>icon/speaker_press.png</file>
+        <file>icon/speaker_muted.png</file>
+        <file>icon/speaker_muted_press.png</file>
+        <file>icon/shuffle.png</file>
+        <file>icon/shuffle_press.png</file>
+        <file>icon/playlist.png</file>
+        <file>icon/playlist_press.png</file>
+        <file>icon/music.svg</file>
+        <file>icon/disk.svg</file>
+
+<!--        <file>icon/loop.svg</file>-->
+<!--        <file>icon/sequential.svg</file>-->
+<!--        <file>icon/currentloop.svg</file>-->
+    </qresource>
+</RCC>
