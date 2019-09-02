@@ -184,6 +184,7 @@ class PlayListWidget(QListWidget):
         self.setAcceptDrops(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setMovement(QListView.Free)
+        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
 
     def dropEvent(self, event):
@@ -206,24 +207,29 @@ class PlayListWidget(QListWidget):
 
     def addMusic(self, music):
         item = QListWidgetItem()
-        item.setText(music.fileName())
 
-        # playListItem = PlayListItem()
-        # item.setSizeHint(playListItem.sizeHint())
+        playListItem = PlayListItem(self)
+        playListItem.setText(music.fileName())
+        item.setSizeHint(playListItem.sizeHint())
 
         self.addItem(item)
-        # self.setItemWidget(item, playListItem)
+        self.setItemWidget(item, playListItem)
 
     def addMusics(self, musics):
         for url in musics:
             item = QListWidgetItem()
-            item.setText(url.fileName())
+            item.setTextAlignment(Qt.AlignLeft)
 
-            # playListItem = PlayListItem()
-            # item.setSizeHint(playListItem.sizeHint())
+            playListItem = PlayListItem(self)
+            playListItem.setText(url.fileName())
+            item.setSizeHint(playListItem.minimumSizeHint())
 
             self.addItem(item)
-            # self.setItemWidget(item, playListItem)
+            self.setItemWidget(item, playListItem)
+
+    def insertDuration(self, index, duration):
+        item = self.itemWidget(self.item(index))
+        item.setDuration(duration)
 
 
 class PlayListItem(QWidget):
@@ -233,11 +239,24 @@ class PlayListItem(QWidget):
         self.setLayout(QHBoxLayout())
 
         self.itemNameLabel = QLabel(self)
+        self.itemNameLabel.setWordWrap(True)
         self.layout().addWidget(self.itemNameLabel)
+        # self.layout().addSpacerItem(QSpacerItem(10, 5, QSizePolicy.Preferred, QSizePolicy.Preferred))
 
         self.durationLabel = QLabel(self)
+        self.durationLabel.setFixedWidth(40)
+        self.durationLabel.setAlignment(Qt.AlignRight)
         self.layout().addWidget(self.durationLabel)
 
+    def setText(self, text):
+        self.itemNameLabel.setText(text)
 
-    def addMusic(self, music):
-        pass
+    def setDuration(self, duration):
+        self.durationLabel.setText(self.__duration2time(duration))
+
+
+    def __duration2time(self, duration):
+        m = duration/1000
+        time = "{:02d}:{:02d}".format(int(m/60), int(m%60))
+
+        return time

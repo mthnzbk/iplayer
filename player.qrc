@@ -18,6 +18,10 @@
         <file>icon/playlist_press.png</file>
         <file>icon/music.svg</file>
         <file>icon/disk.svg</file>
+        <file>icon/playw.png</file>
+        <file>icon/nextw.png</file>
+        <file>icon/previousw.png</file>
+        <file>icon/pausew.png</file>
 
 <!--        <file>icon/loop.svg</file>-->
 <!--        <file>icon/sequential.svg</file>-->

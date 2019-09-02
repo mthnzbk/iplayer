@@ -1,16 +1,47 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, qApp
+from PyQt5.QtWinExtras import QWinTaskbarButton, QWinThumbnailToolBar, QWinThumbnailToolButton
 from PyQt5.QtGui import QBrush, QIcon
-from PyQt5.QtCore import QUrl, QDir, QFile, QIODevice, QTextStream, Qt
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer, QMediaPlaylist, QMediaMetaData
+from PyQt5.QtCore import QUrl, QDir, QFile, QIODevice, QTextStream, Qt, QThread, pyqtSignal
+from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer, QMediaPlaylist
 from playerwidget import PlayerWidget, PlayListWidget
 from settings import settings
 import playericon
 import sys
+from pynput.keyboard import Key, Listener
+
+
+class CaptureKey(QThread):
+
+    captureKeyState = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__()
+
+    def listen(self):
+        with Listener(
+                on_press=self.on_press) as self.listener:
+            self.listener.join()
+
+
+    def on_press(self, key):
+        key = str(key)
+        if key == "<177>":
+            self.captureKeyState.emit("prev")
+
+        elif key == "<179>": #play and pause
+            self.captureKeyState.emit("play")
+
+        elif key == "<176>": #next
+            self.captureKeyState.emit("next")
+
+    def run(self):
+        self.listen()
 
 
 class Window(QMainWindow):
 
     currentItem = None
+    firstOpen = False
 
     def __init__(self):
         super().__init__()
@@ -33,6 +64,10 @@ class Window(QMainWindow):
         self.playList = QMediaPlaylist(self)
         self.mediaPlayer.setPlaylist(self.playList)
 
+        self.captureKey = CaptureKey(self)
+        self.captureKey.captureKeyState.connect(self.captureKeyClick)
+
+
         self.playerWidget.playButtonClicked.connect(self.play)
         self.playerWidget.showOrHideClicked.connect(self.playListShowOrHide)
         self.playerWidget.volumeChanged.connect(self.volumeChange)
@@ -49,7 +84,7 @@ class Window(QMainWindow):
         self.mediaPlayer.audioAvailableChanged.connect(self.audioAvailableChanged)
         self.mediaPlayer.currentMediaChanged.connect(self.currentMediaChanged)
         # self.mediaPlayer.durationChanged.connect(self.durationChanged)
-        # self.mediaPlayer.connect(SIGNAL("mediaChanged(QMediaContent *)"), self.mediaChanged)
+        self.mediaPlayer.mediaChanged.connect(self.mediaChanged)
         self.mediaPlayer.mutedChanged.connect(self.mutedChanged)
         self.mediaPlayer.positionChanged.connect(self.positionChanged)
         self.mediaPlayer.seekableChanged.connect(self.seekableChanged)
@@ -74,6 +109,17 @@ class Window(QMainWindow):
             self.mediaPlayer.playlist().setPlaybackMode(QMediaPlaylist.Sequential)
         elif playback == 3:
             self.mediaPlayer.playlist().setPlaybackMode(QMediaPlaylist.Loop)
+
+    def captureKeyClick(self, state):
+        print(state)
+        if state == "prev":
+            self.previousMusic()
+
+        elif state == "play":
+            self.play()
+
+        elif state == "next":
+            self.nextMusic()
 
     def addPlayList(self, musics):
         self.playListWidget.addMusics(musics)
@@ -161,16 +207,30 @@ class Window(QMainWindow):
 
     def musicPositionMove(self, pos):
         self.mediaPlayer.setPosition(pos)
+        try:
+            self.taskBarProgress.setValue(pos)
+
+        except AttributeError as err:
+            print(err)
 
     #mediaplayer signals
     def audioAvailableChanged(self, available):
+        # if available == False:
+        #     self.nextMusic()
+        #     return
+
         if "Duration" in self.mediaPlayer.availableMetaData():
             self.playerWidget.setDuration(self.mediaPlayer.metaData("Duration"))
+            self.taskBarProgress.setMaximum(self.mediaPlayer.metaData("Duration"))
+            self.playListWidget.insertDuration(self.mediaPlayer.playlist().currentIndex(),
+                                               self.mediaPlayer.metaData("Duration"))
+
 
         for data in self.mediaPlayer.availableMetaData():
             print(data, self.mediaPlayer.metaData(data))
 
     def currentMediaChanged(self, mediacontent):
+        print(mediacontent.canonicalUrl())
         self.setWindowTitle(self.mediaPlayer.currentMedia().canonicalUrl().fileName())
         if self.currentItem:
             self.currentItem.setForeground(QBrush())
@@ -184,8 +244,8 @@ class Window(QMainWindow):
     # def durationChanged(self, duration):
     #     pass
 
-    # def mediaChanged(self, media):
-    #     print(media)
+    def mediaChanged(self, media):
+        print(media)
 
     def mutedChanged(self, muted):
         if muted:
@@ -196,6 +256,11 @@ class Window(QMainWindow):
 
     def positionChanged(self, pos):
         self.playerWidget.setPosition(pos)
+        try:
+            self.taskBarProgress.setValue(pos)
+
+        except AttributeError as err:
+            print(err)
 
     def seekableChanged(self, seekable):
         pass#print(seekable)
@@ -203,18 +268,21 @@ class Window(QMainWindow):
     def stateChanged(self, state):
         if state == QMediaPlayer.PlayingState:
             self.playerWidget.playButtonStatus("play")
+            self.thumbnailPlayButton.setIcon(QIcon(":/icon/pausew.png"))
 
         elif state == QMediaPlayer.PausedState:
             self.playerWidget.playButtonStatus("pause")
+            self.thumbnailPlayButton.setIcon(QIcon(":/icon/playw.png"))
 
         elif state == QMediaPlayer.StoppedState:
             self.playerWidget.playButtonStatus("pause")
+            self.thumbnailPlayButton.setIcon(QIcon(":/icon/playw.png"))
 
     def volumeChanged(self, volume):
         pass#print(volume)
 
     def error(self, err):
-        print(err)
+        print(err, "asdasdasdasdasd")
 
     def loaded(self):
         print("loaded")
@@ -242,6 +310,36 @@ class Window(QMainWindow):
 
         else:
             super().setWindowTitle(title)
+
+    def showEvent(self, event):
+        self.taskBarButton = QWinTaskbarButton(self)
+        self.taskBarButton.setWindow(self.windowHandle())
+        # self.taskBarButton.setOverlayIcon(QIcon(":/icon/disk.svg"))
+
+        self.taskBarProgress = self.taskBarButton.progress()
+        self.taskBarProgress.setVisible(True)
+
+        self.thumbnailToolBar = QWinThumbnailToolBar(self)
+        self.thumbnailToolBar.setWindow(self.windowHandle())
+
+        self.thumbnailPreviousButton = QWinThumbnailToolButton(self.thumbnailToolBar)
+        self.thumbnailPreviousButton.setIcon(QIcon(":/icon/previousw.png"))
+        self.thumbnailPreviousButton.clicked.connect(self.previousMusic)
+
+        self.thumbnailPlayButton = QWinThumbnailToolButton(self.thumbnailToolBar)
+        self.thumbnailPlayButton.setIcon(QIcon(":/icon/playw.png"))
+        self.thumbnailPlayButton.clicked.connect(self.play)
+
+        self.thumbnailNextButton = QWinThumbnailToolButton(self.thumbnailToolBar)
+        self.thumbnailNextButton.setIcon(QIcon(":/icon/nextw.png"))
+        self.thumbnailNextButton.clicked.connect(self.nextMusic)
+
+        self.thumbnailToolBar.addButton(self.thumbnailPreviousButton)
+        self.thumbnailToolBar.addButton(self.thumbnailPlayButton)
+        self.thumbnailToolBar.addButton(self.thumbnailNextButton)
+
+        self.captureKey.start()
+
 
     def closeEvent(self, event):
         if not QDir().exists(QDir.homePath()+"/.iplayer"):

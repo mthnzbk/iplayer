@@ -9,6 +9,8 @@ verify_ssl = true
 pyside2 = "*"
 pyqt5-tools = "*"
 pyqt5 = "*"
+pywin32 = "*"
+pynput = "*"
 
 [requires]
 python_version = "3.7"
