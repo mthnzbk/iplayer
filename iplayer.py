@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, qApp
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, qApp, QListWidgetItem
 from PyQt5.QtWinExtras import QWinTaskbarButton, QWinThumbnailToolBar, QWinThumbnailToolButton
 from PyQt5.QtGui import QBrush, QIcon
 from PyQt5.QtCore import QUrl, QDir, QFile, QIODevice, QTextStream, Qt, QThread, pyqtSignal
@@ -99,9 +99,10 @@ class Window(QMainWindow):
         self.mediaPlayer.playlist().setCurrentIndex(int(settings().value("currentMusic") or 0))
 
         item = self.playListWidget.item(int(settings().value("currentMusic") or 0))
-        item.setForeground(Qt.lightGray)
-        item.setBackground(Qt.darkGray)
-        self.currentItem = item
+        if isinstance(item, QListWidgetItem):
+            item.setForeground(Qt.lightGray)
+            item.setBackground(Qt.darkGray)
+            self.currentItem = item
         playback = int(settings().value("playbackMode") or 2)
         if playback == 1:
             self.mediaPlayer.playlist().setPlaybackMode(QMediaPlaylist.CurrentItemInLoop)
@@ -237,9 +238,11 @@ class Window(QMainWindow):
             self.currentItem.setBackground(QBrush())
 
         item = self.playListWidget.item(self.mediaPlayer.playlist().currentIndex())
-        item.setForeground(Qt.lightGray)
-        item.setBackground(Qt.darkGray)
-        self.currentItem = item
+        print(item)
+        if isinstance(item, QListWidgetItem):
+            item.setForeground(Qt.lightGray)
+            item.setBackground(Qt.darkGray)
+            self.currentItem = item
 
     # def durationChanged(self, duration):
     #     pass
